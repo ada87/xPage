@@ -1,9 +1,12 @@
-var $b=null;
+var $b;
 /**
 *	设置初始化事件，可以回调设置的方法，并把浏览器对象做为参数传回
 */
-$.readyPage=function(fn){
-	fn.call(fn,$b);
+$.listenMethod={};
+$.readyPage=function(load,href){
+	$.listenMethod.load=load;
+	$.listenMethod.href=href;
+	$.listenMethod.load.call($.listenMethod,$b);
 }
 /**
 *	浏览器对象，用来控制URL
@@ -18,11 +21,12 @@ XBrowser.prototype={
 	_init:function(){
 		this.h5=window.history.pushState?true:false;
 	},
+	
 /**
 *	初始化，兼返回链接拼装信息
 */
 	getPath:function(config){
-		var temp=this.root;
+		var temp=window.location.href;
 		var strRegex = "^(https://|http://)"							// url使用的协议	
 		+ "([^:/]+)" 													// 主机
 		+ "(:[0-9]{1,4})?" 												// 端口- :80
@@ -55,7 +59,6 @@ XBrowser.prototype={
 		var paths=path.split('/');
 		if(paths[0]){		//relative
 			return this.basepath.substring(0,this.basepath.lastIndexOf('/'))+'/'+path;
-			this.basepath;
 		}else{				//absolute
 			return this.root+path;
 		}
@@ -64,28 +67,41 @@ XBrowser.prototype={
 *	改变浏览器链接
 */
 	change:function(rote){
-		var url=typeof rote =='string'?rote:rote.url;
-		this.h5?window.history.pushState(rote,null,this._roteUrl(url)):window.location.href=this.basepath+"#"+url;
+		rote=rote.replace(this.root,'');
+		if(!this.h5){
+			window.location.href=this.basepath+"#"+rote;
+		}else{
+			roteurl=this._roteUrl(rote)
+			if(window.location.href==roteurl){
+				return;
+			}
+			window.history.pushState(rote,null,roteurl);
+		}
+		
 	}
 }
 /**
 *	扩展Jquery的Ajax特性，使支持方法
 */
-XPage=function(){
-	this._init();
-}
-XPage.prototype={
-	_init:function(){
-		$.ajaxSetup({beforeSend:this._rerote,complete:this._rerote});
-		window.onpopstate=function(evt){
-			console.log(evt);
-		}
-	},
-	_rerote:function(xhr,setting){
-		if(setting.rote){
-			$b.change(setting.rote);
-		}
-	}
-}
 $b = new XBrowser();
-new XPage();
+(function(){
+	var _rerote=function(xhr,setting){
+		if(setting.rote){$b.change(setting.rote);}
+	};
+	$.ajaxSetup({beforeSend:_rerote});
+	window.onpopstate=function(evt){
+		$.listenMethod.load.call($.listenMethod.load,$b);
+	}
+})();
+$(document).ready(
+	function(){
+		$('a.xpage').click(
+			function(e){
+				var target=e.srcElement||e.currentTarget||e.target;
+				$b.change(target.href);
+				$.listenMethod.href.call($.listenMethod.href,$b,target.href.replace($b.basepath,''));
+				return false;
+			}
+		);
+	}
+);
