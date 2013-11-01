@@ -9,8 +9,8 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	<head>
 		<meta charset="utf-8" />
 		<title>Xpage Location</title>
-		<script type="text/javascript" src="<%=path %>/jquery.js"></script>
-		<script type="text/javascript" src="<%=path %>/xpage.js"></script>
+		<script type="text/javascript" src="<%=path %>/jQuery.js"></script>
+		<script type="text/javascript" src="<%=path %>/xPage.js"></script>
 		<style>
 		#test{
 			width:200px;
@@ -85,7 +85,9 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	$.readyPage(
 		function(browser){
 			//此处只支持绝对路径
-			var path=browser.getPath('/Xpage/');
+			var path=browser.getPath(
+				{basePath:'/Xpage/',index:'home'}
+			);
 			toPath(path)
 
 		},

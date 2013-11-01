@@ -18,6 +18,7 @@ XBrowser.prototype={
 	h5:false,
 	root:window.location.href,
 	basepath:window.location.href,
+	index:'',
 	_init:function(){
 		this.h5=window.history.pushState?true:false;
 	},
@@ -38,19 +39,16 @@ XBrowser.prototype={
 		if(RegUrl.test(temp)){
 			this.root=RegExp.$1+RegExp.$2+RegExp.$3;
 			this.basepath=RegExp.$1+RegExp.$2+RegExp.$3+RegExp.$4+RegExp.$5;
-			if(!this.h5){return;}	
 			var address=RegExp.$4;
 			if(typeof config =='string'){
 				address=config;
 			}else if(typeof config =='object'){
 				address=config.basePath;
+				this.index=config.index;
 			}
-//			相对路径设置，如果页面刷新会有BUG，不再使用，如果要传PATH参数必须为绝对路径 ，如 '/home'		
 			this.basepath=this.root+address;
-			return temp.replace(this.basepath,'');
+			return temp.replace(this.basepath,'').replace('#','');
 		}
-		
-
 	},
 /**
 *	路由规则
@@ -67,12 +65,22 @@ XBrowser.prototype={
 *	改变浏览器链接
 */
 	change:function(rote){
-		rote=rote.replace(this.root,'');
+		rote=rote.replace(this.basepath,'');
+		console.log(rote);
+		var currenturl=window.location.href;
 		if(!this.h5){
-			window.location.href=this.basepath+"#"+rote;
+			var roteurl=this.basepath+"#"+rote;
+			if(currenturl==roteurl){
+				return;
+			}else if(roteurl==(this.basepath+'#'+this.index)&&currenturl.split('#').length==1){
+				return;
+			}
+			window.location.href=roteurl;
 		}else{
-			roteurl=this._roteUrl(rote)
-			if(window.location.href==roteurl){
+			var roteurl=this._roteUrl(rote);
+			if(currenturl==roteurl){
+				return;
+			}else if(currenturl==this.basepath&&(this.basepath+this.index)==roteurl){
 				return;
 			}
 			window.history.pushState(rote,null,roteurl);
@@ -85,20 +93,30 @@ XBrowser.prototype={
 */
 $b = new XBrowser();
 (function(){
-	var _rerote=function(xhr,setting){
-		if(setting.rote){$b.change(setting.rote);}
-	};
-	$.ajaxSetup({beforeSend:_rerote});
-	window.onpopstate=function(evt){
-		$.listenMethod.load.call($.listenMethod.load,$b);
+	$.ajaxSetup({beforeSend:function(xhr,setting){
+		if(setting.rote){
+			$b.change(setting.rote);
+		}
+	}});
+	if($b.h5){
+		window.onpopstate=function(evt){
+			$.listenMethod.load.call($.listenMethod.load,$b);
+		}
+	}else{
+		window.onhashchange=function(evt){
+			$.listenMethod.load.call($.listenMethod.load,$b);
+		}
 	}
 })();
+/**
+*	绑定链接点击事件，把A标签变为Ajax处理，也不影响链接质量，对SEO友好
+*/
 $(document).ready(
 	function(){
 		$('a.xpage').click(
 			function(e){
 				var target=e.srcElement||e.currentTarget||e.target;
-				$b.change(target.href);
+				console.log(target.href);
 				$.listenMethod.href.call($.listenMethod.href,$b,target.href.replace($b.basepath,''));
 				return false;
 			}
